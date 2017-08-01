@@ -1,0 +1,17 @@
+{
+  "name": "ci-weather",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "ci-client": "git+ssh://git@github.com/mikko/CentralIntelligence-client.git",
+    "fmi-js": "github:mikko/fmi-js"
+  }
+}
