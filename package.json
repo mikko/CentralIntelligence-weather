@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",
-    "ci-client": "git+ssh://git@github.com/mikko/CentralIntelligence-client.git",
-    "fmi-js": "github:mikko/fmi-js"
+    "ci-client": "mikko/CentralIntelligence-client",
+    "fmi-js": "mikko/fmi-js"
   }
 }
