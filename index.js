@@ -1,5 +1,6 @@
 const Promise = require('bluebird');
 const Client = require('ci-client');
+const Moment = require('moment');
 const config = require('./client-config.js');
 
 const fmi = require('fmi-js');
@@ -40,22 +41,123 @@ const symbolMap = {
 
 const symbolToDesc = symbol => symbolMap[symbol];
 
+const defaultTime = 15;
+const forecastTimes = [ 8, 12, 16, 20 ];
+const weekdays = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday'
+];
+
+const dateStrToMoment = (date) => {
+    let forecast = true;
+    let dateTerm = date || 'now';
+    let customDate = '';
+    const now = new Moment();
+
+    // Assuming 'next saturday', 'next weekend' etc
+    if (dateTerm.split(' ').length > 1) {
+        dateParts = date.split(' ');
+        dateTerm = 'custom';
+        customDate = dateParts[1];
+    }
+
+    if (weekdays.indexOf(dateTerm.toLocaleLowerCase()) !== -1) {
+        customDate = dateTerm;
+        dateTerm = 'custom';
+    }
+
+    switch(dateTerm) {
+        case 'tomorrow':
+            return forecastTimes.map(hour => new Moment(now).add(1, 'day').hours(hour));
+            break;
+        case 'custom':
+            const currentWeekday = now.isoWeekday();
+            if (customDate === 'weekend') {
+                customDate = 'saturday';
+            }
+
+            const wantedWeekday = new Moment().day(customDate).isoWeekday();
+
+            if (forecast) {
+                const thisWeek = wantedWeekday > currentWeekday;
+                const daysForward = thisWeek ? wantedWeekday - currentWeekday : wantedWeekday - currentWeekday + 7;
+                return forecastTimes.map(hour => new Moment(now).add(daysForward, 'day').hours(hour));
+            }
+            break;
+        default:
+            return [now];
+    }
+};
+
+const getEntryByMoment = (list, moment) => {
+    return list.find(entry => {
+        const entryDate = new Moment(entry.time);
+        if (moment.isSame(entryDate, 'hour')) {
+            return entry;
+        }
+    })
+};
+
 const messageReceiver = (action, message, context, reply) => {
-    const locations = message.locations.length > 0 ? message.locations: [defaultLocation];
-    console.log('Getting weather for ', locations, message.dates, message.times);
+    const location = message.locations.length > 0 ? message.locations[0]: defaultLocation;
+    const date = message.dates[0];
+    console.log('Getting weather for ', location, date, message.times);
 
-    const observationPromises = Promise.all(locations.map(location => fmi.latestObservations(location)));
-    const forecastPromises = Promise.all(locations.map(location => fmi.simpleForecast(location)));
+    const today = message.dates.length === 0;
 
-    Promise.props({ observations: observationPromises, forecasts: forecastPromises })
+    const dateMoments = dateStrToMoment(date);
+
+    let fcStart;
+    let fcEnd;
+
+    if (!today) {
+        fcStart = new Moment(dateMoments[0]).subtract(12, 'hours').toISOString();
+        fcEnd = new Moment(dateMoments[dateMoments.length - 1]).add(12, 'hours').toISOString();
+    }
+
+    const observationPromises = fmi.latestObservations(location);
+    const forecastPromises = fmi.simpleForecast(location, fcStart, fcEnd);
+
+    Promise.props({ observations: observationPromises, forecast: forecastPromises })
         .then(results => {
-            const { observations, forecasts } = results;
-            const descriptions = forecasts.map(fc => symbolToDesc(fc.shift().weathersymbol3));
+            const { observations, forecast } = results;
 
-            const latestObservationsForLocation = observations.map((obs, i) => ({ location: locations[i], weather: obs.pop(), description: descriptions[i] }));
+            const forecastWithDescriptions = forecast.map(fc => Object.assign(fc, { description: symbolToDesc(fc.weathersymbol3) }));
 
-            const message = latestObservationsForLocation.map(obs => `Weather in ${obs.location} is ${obs.description} and ${obs.weather.temperature} degrees.`).join('. ');
-            reply(message);
+            // Forecast
+            if (!today) {
+                const dateString = new Moment(dateMoments[0]).format("dddd");
+                const messageStart = `${dateString} in ${location}\n`;
+                const forecastMessages = dateMoments.map(hour => {
+                    const correctForecast = getEntryByMoment(forecastWithDescriptions, hour);
+
+                    if (correctForecast === undefined || correctForecast.description === undefined) {
+                        return;
+                    }
+
+                    const hourString = new Moment(correctForecast.time).format("H:mm");
+                    return `at ${hourString} ${correctForecast.description} and ${parseInt(correctForecast.temperature)} degrees`;
+                }).filter(msg => msg !== undefined);
+
+                if (forecastMessages.length === 0) {
+                    reply(`No forecast available for ${date}`);
+                    return;
+                }
+
+                const forecastStr = forecastMessages.join('\n');
+                reply(`${messageStart}${forecastStr}`);
+
+            } else { // Latest observation
+                const latestObservation= observations.pop();
+                const description = forecastWithDescriptions.shift().description;
+                const message = `Weather in ${location} is currently ${description} and ${latestObservation.temperature} degrees.`;
+                reply(message);
+            }
         });
 };
 

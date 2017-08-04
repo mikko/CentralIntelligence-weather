@@ -12,6 +12,7 @@
   "dependencies": {
     "bluebird": "^3.5.0",
     "ci-client": "mikko/CentralIntelligence-client",
-    "fmi-js": "mikko/fmi-js"
+    "fmi-js": "mikko/fmi-js",
+    "moment": "^2.18.1"
   }
 }
