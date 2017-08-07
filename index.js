@@ -104,11 +104,11 @@ const getEntryByMoment = (list, moment) => {
 };
 
 const messageReceiver = (action, message, context, reply) => {
-    const location = message.locations.length > 0 ? message.locations[0]: defaultLocation;
-    const date = message.dates[0];
-    console.log('Getting weather for ', location, date, message.times);
+    const location = message.entities.locations.length > 0 ? message.entities.locations[0]: defaultLocation;
+    const date = message.entities.dates[0];
+    console.log('Getting weather for ', location, date, message.entities.times);
 
-    const today = message.dates.length === 0;
+    const today = message.entities.dates.length === 0;
 
     const dateMoments = dateStrToMoment(date);
 
