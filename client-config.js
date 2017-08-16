@@ -5,6 +5,7 @@ module.exports = {
     myHost: 'localhost',
     myPort: 3003,
     output: false,
+    authKey: '', // Change this
     actions: {
         weather: {
             keywords: [
