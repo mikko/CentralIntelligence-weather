@@ -8,6 +8,7 @@ module.exports = {
     authKey: '', // Change this
     actions: {
         weather: {
+            exactPhrase: 'weather',
             keywords: [
                 {
                     word: 'weather',
