@@ -1,11 +1,16 @@
 const Promise = require('bluebird');
 const Client = require('ci-client');
 const Moment = require('moment');
-const config = require('./client-config.js');
+const clientConfig = require('./client-config.js');
+
+if (!process.env.FMI_APIKEY) {
+    const config = require('./config');
+    process.env.FMI_APIKEY = config.fmiApikey;
+}
 
 const fmi = require('fmi-js');
 
-const client = new Client(config);
+const client = new Client(clientConfig);
 
 const defaultLocation = 'Tampere';
 

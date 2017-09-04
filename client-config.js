@@ -1,11 +1,13 @@
+const fs = require('fs');
+
 module.exports = {
     name: 'weather service',
-    serverHost: 'localhost',
-    serverPort: 3000,
-    myHost: 'localhost',
-    myPort: 3003,
+    serverHost: process.env.SERVER_HOST || 'localhost',
+    serverPort: process.env.SERVER_PORT || 3000,
+    myHost: process.env.MY_HOST || 'localhost',
+    myPort: process.env.MY_PORT || 3003,
+    authKey: process.env.AUTH_KEY || fs.readFileSync('/run/secrets/authkey', { encoding: 'utf-8' }).trim(),
     output: false,
-    authKey: '', // Change this
     actions: {
         weather: {
             exactPhrase: 'weather',
