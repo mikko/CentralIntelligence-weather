@@ -8,6 +8,7 @@ module.exports = {
     myPort: process.env.MY_PORT || 3003,
     authKey: process.env.AUTH_KEY || fs.readFileSync('/run/secrets/authkey', { encoding: 'utf-8' }).trim(),
     output: false,
+    trustedUserGroups: 'all',
     actions: {
         weather: {
             exactPhrase: 'weather',
